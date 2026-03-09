@@ -31,8 +31,6 @@
 
 .non-primary-button,
 .primary-button {
-  /* min-width: 120px;
-  max-width: 350px; */
   display: inline-flex;
   justify-content: center;
   align-items: center;

@@ -13,96 +13,78 @@ import { getNavItems } from "./navItems";
 function NavBar() {
   const { auth, setAuth } = useOutletContext<OutletAuthContext>();
 
-  const logoutUser = () => {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  const logOut = () => {
     localStorage.removeItem("auth");
     setAuth(null);
   };
 
-  const isSchool = auth?.role === "school";
-  const styles = isSchool ? schoolStyles : parentStyles;
-
-  const allItems = getNavItems(auth);
-  const menuItems = allItems.filter((item) => item.label !== "Déconnexion");
-
-  const displayName =
-    auth?.role === "parent"
-      ? (auth?.profile as Parent).firstName
-      : (auth?.profile as School).name;
-
-  const avatarSrc = auth?.profile.photoUrl;
-
-  const mobileContainerClass = isSchool
+  const isSchoolUser = auth?.role === "school";
+  const styles = isSchoolUser ? schoolStyles : parentStyles;
+  const mobileNavStyle = isSchoolUser
     ? schoolStyles.mobileNav
     : parentStyles.mobileNavParent;
 
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isPinned, setIsPinned] = useState(false);
+  const menuItems = getNavItems(auth).filter(
+    (item) => item.label !== "Déconnexion",
+  );
 
-  const togglePinned = () => {
-    setIsCollapsed((prev) => {
-      const nextCollapsed = !prev;
-      setIsPinned(!nextCollapsed);
-      return nextCollapsed;
-    });
-  };
+  let userName = "";
+  if (auth?.role === "parent") {
+    const parentProfile = auth.profile as Parent;
+    userName = parentProfile.firstName;
+  } else if (auth?.role === "school") {
+    const schoolProfile = auth.profile as School;
+    userName = schoolProfile.name;
+  }
 
-  const handleMouseEnter = () => {
-    if (!isPinned) setIsCollapsed(false);
-  };
-
-  const handleMouseLeave = () => {
-    if (!isPinned) setIsCollapsed(true);
-  };
+  const userImage = auth?.profile.photoUrl || "/images/default_avatar.png";
 
   return (
     <>
       <aside
         id="sidebar"
-        className={`${styles.sidebar} ${
-          isCollapsed ? styles.collapsed : styles.expanded
-        }`}
-        aria-label="Navigation principale"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
+        aria-label="Menu latéral"
+        className={`${styles.sidebar} ${isSidebarOpen ? styles.expanded : styles.collapsed}`}
+        onMouseEnter={() => setIsSidebarOpen(true)}
+        onMouseLeave={() => setIsSidebarOpen(false)}
       >
         <button
           type="button"
           className={styles.toggleButton}
-          onClick={togglePinned}
-          aria-pressed={isPinned}
-          aria-expanded={!isCollapsed}
-          aria-label={isPinned ? "Désépingler" : "Épingler"}
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          aria-expanded={isSidebarOpen}
+          aria-label={isSidebarOpen ? "Réduire le menu" : "Ouvrir le menu"}
         >
-          <span aria-hidden="true" className={styles.toggleIcon}>
-            {isCollapsed ? "❯❯" : "❮❮"}
+          <span className={styles.toggleIcon} aria-hidden="true">
+            {isSidebarOpen ? "❮❮" : "❯❯"}
           </span>
         </button>
 
         <div className={styles.profile}>
-          <img
-            src={avatarSrc || "/images/default_avatar.png"}
-            alt={displayName}
-            className={styles.avatar}
-          />
-          {!isCollapsed && (
-            <span className={styles.displayName}>{displayName}</span>
+          <img src={userImage} alt={userName} className={styles.avatar} />
+          {isSidebarOpen && (
+            <span className={styles.displayName}>{userName}</span>
           )}
         </div>
 
-        <nav className={styles.nav}>
+        <nav className={styles.nav} aria-label="Navigation principale">
           <ul className={styles.navList}>
-            {menuItems.map(({ to, label, Icon }) => (
-              <li key={to} className={styles.navItem}>
+            {menuItems.map((item) => (
+              <li key={item.to} className={styles.navItem}>
                 <NavLink
-                  to={to || "#"}
+                  to={item.to || "#"}
                   className={({ isActive }) =>
-                    `${styles.navLink} ${isActive ? styles.active : ""}`
+                    isActive
+                      ? `${styles.navLink} ${styles.active}`
+                      : styles.navLink
                   }
-                  aria-label={label}
+                  aria-label={item.label}
                 >
-                  <Icon className={styles.icon} aria-hidden="true" />
-                  {!isCollapsed && (
-                    <span className={styles.linkLabel}>{label}</span>
+                  <item.Icon className={styles.icon} aria-hidden="true" />
+                  {isSidebarOpen && (
+                    <span className={styles.linkLabel}>{item.label}</span>
                   )}
                 </NavLink>
               </li>
@@ -111,65 +93,71 @@ function NavBar() {
         </nav>
 
         <div className={styles.footer}>
-          {!isCollapsed ? (
+          {isSidebarOpen ? (
             <LogoutButton />
           ) : (
             <button
               type="button"
-              onClick={logoutUser}
+              onClick={logOut}
               className={styles.collapsedLogout}
-              aria-label="Déconnexion"
+              aria-label="Se déconnecter"
             >
               <LogOut className={styles.icon} aria-hidden="true" />
             </button>
           )}
 
           <NavLink
-            to={auth?.role ? `/${auth.role}/home` : "/"}
+            to={isSchoolUser ? "/school/home" : "/parent/home"}
             className={styles.footerLogoLink}
-            aria-label="Accueil"
+            aria-label="Retour à l'accueil"
           >
             <img
               src={siteLogo}
-              alt="P'tit Cahier"
+              alt="Logo P'tit Cahier"
               className={styles.footerLogo}
             />
           </NavLink>
-
-          {!isCollapsed && (
+          {isSidebarOpen && (
             <p className={styles.footerText}>P'tit Cahier © 2026</p>
           )}
         </div>
       </aside>
 
-      <nav className={mobileContainerClass} aria-label="Navigation mobile">
+      <nav className={mobileNavStyle} aria-label="Navigation mobile">
         <div className={styles.mobileRow}>
           <NavLink
-            to={auth?.role ? `/${auth.role}/home` : "/"}
+            to={isSchoolUser ? "/school/home" : "/parent/home"}
             className={styles.mobileHome}
-            aria-label="Accueil"
+            aria-label="Retour à l'accueil"
           >
-            <img src={siteLogo} alt="Logo" className={styles.mobileLogo} />
+            <img
+              src={siteLogo}
+              alt=""
+              className={styles.mobileLogo}
+              aria-hidden="true"
+            />
           </NavLink>
 
-          {menuItems.map(({ to, label, Icon }) => (
+          {menuItems.map((item) => (
             <NavLink
-              key={`mobile-${to}`}
-              to={to || "#"}
+              key={`mobile-${item.to}`}
+              to={item.to || "#"}
               className={({ isActive }) =>
-                `${styles.mobileLink} ${isActive ? styles.active : ""}`
+                isActive
+                  ? `${styles.mobileLink} ${styles.active}`
+                  : styles.mobileLink
               }
-              aria-label={label}
+              aria-label={item.label}
             >
-              <Icon className={styles.icon} aria-hidden="true" />
+              <item.Icon className={styles.icon} aria-hidden="true" />
             </NavLink>
           ))}
 
           <button
             type="button"
-            onClick={logoutUser}
+            onClick={logOut}
             className={styles.mobileLogoutButton}
-            aria-label="Déconnexion"
+            aria-label="Se déconnecter"
           >
             <LogOut className={styles.icon} aria-hidden="true" />
           </button>
@@ -178,5 +166,4 @@ function NavBar() {
     </>
   );
 }
-
 export default NavBar;

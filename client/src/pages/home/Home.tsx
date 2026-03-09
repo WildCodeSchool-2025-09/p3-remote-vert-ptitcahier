@@ -138,7 +138,7 @@ function Home() {
         <header className={styles.home_header}>
           <img
             src={ptit_cahier_logo_original}
-            alt="P'tit Cahier"
+            alt="logo P'tit Cahier"
             className={styles.logo}
           />
           <section className={styles.ba_card} aria-labelledby="school-name">
